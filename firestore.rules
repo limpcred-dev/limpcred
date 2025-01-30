@@ -1,0 +1,144 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    function isVendedor() {
+      return isAuthenticated() && getUserData().tipo == 'vendedor';
+    }
+    
+    function belongsToEmpresa(empresaId) {
+      return isAuthenticated() && 
+        (getUserData().empresaId == empresaId ||
+         exists(/databases/$(database)/documents/admin_empresas/$(request.auth.uid)_$(empresaId)));
+    }
+
+    // Centro de Custos rules
+    match /centros_custo/{centroId} {
+      allow read: if isAuthenticated() && 
+        (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && 
+        (isAdmin() || request.resource.data.userId == request.auth.uid);
+      allow update: if isAuthenticated() && 
+        (isAdmin() || resource.data.userId == request.auth.uid);
+      allow delete: if false; // Soft delete only
+    }
+
+    // Cartões de Crédito rules
+    match /cartoes_credito/{cartaoId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow write: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Contas Bancárias rules
+    match /contas_bancarias/{contaId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow write: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Receitas rules
+    match /receitas/{receitaId} {
+      allow read: if isAuthenticated() && belongsToEmpresa(resource.data.empresaId);
+      allow write: if isAuthenticated() && belongsToEmpresa(request.resource.data.empresaId);
+    }
+
+    // Despesas rules
+    match /despesas/{despesaId} {
+      allow read: if isAuthenticated() && belongsToEmpresa(resource.data.empresaId);
+      allow write: if isAuthenticated() && belongsToEmpresa(request.resource.data.empresaId);
+    }
+
+    // Centro de Custos rules
+    match /centros_custo/{centroId} {
+      allow read: if isAuthenticated() && belongsToEmpresa(resource.data.empresaId);
+      allow create: if isAuthenticated() && belongsToEmpresa(request.resource.data.empresaId);
+      allow update: if isAuthenticated() && belongsToEmpresa(resource.data.empresaId);
+      allow delete: if false; // Soft delete only
+    }
+
+    function isVendedor() {
+      return isAuthenticated() && getUserData().tipo == 'vendedor';
+    }
+
+    // Centro de Custos rules
+    match /centros_custo/{centroId} {
+      allow read: if isAuthenticated() && belongsToEmpresa(resource.data.empresaId);
+      allow create: if isAuthenticated() && belongsToEmpresa(request.resource.data.empresaId);
+      allow update: if isAuthenticated() && belongsToEmpresa(resource.data.empresaId);
+      allow delete: if false; // Soft delete only
+    }
+
+    // Clientes rules
+    match /clientes/{clienteId} {
+      allow read: if isAuthenticated() && 
+        (isAdmin() || 
+         (isVendedor() && resource.data.vendedorId == request.auth.uid) ||
+         belongsToEmpresa(resource.data.empresaId));
+      allow create: if isAuthenticated() && 
+        (isAdmin() || 
+         (isVendedor() && 
+          request.resource.data.vendedorId == request.auth.uid &&
+          request.resource.data.empresaId == getUserData().empresaId));
+      allow update: if isAuthenticated() && 
+        (isAdmin() || 
+         (isVendedor() && resource.data.vendedorId == request.auth.uid));
+      allow delete: if false; // Soft delete only
+    }
+
+    // Processos rules
+    match /processos/{processoId} {
+      allow read: if isAuthenticated() && 
+        (isAdmin() || 
+         belongsToEmpresa(resource.data.empresaId));
+      allow create: if isAuthenticated() && 
+        (isAdmin() || 
+         belongsToEmpresa(request.resource.data.empresaId));
+      allow update: if isAuthenticated() && 
+        (isAdmin() || 
+         belongsToEmpresa(resource.data.empresaId));
+      allow delete: if false; // Soft delete only
+    }
+
+    // Empresas rules
+    match /empresas/{empresaId} {
+      allow read: if isAuthenticated() && 
+        belongsToEmpresa(empresaId);
+      allow write: if isAuthenticated() && isAdmin() &&
+        belongsToEmpresa(empresaId);
+    }
+
+    // Users rules
+    match /users/{userId} {
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == userId || isAdmin());
+      allow create: if isAdmin() && 
+        (get(/databases/$(database)/documents/users/$(userId)).data.tipo == 'vendedor' || 
+         get(/databases/$(database)/documents/users/$(userId)).data.tipo == 'cliente');
+      allow update, delete: if isAdmin();
+    }
+
+    // Admins rules
+    match /admins/{adminId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Admin-Empresa relationship rules
+    match /admin_empresas/{relationId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}

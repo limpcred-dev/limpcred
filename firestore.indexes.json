@@ -1,0 +1,60 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "cartoes_credito",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "contas_bancarias", 
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "centros_custo",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "nome", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "receitas",
+      "queryScope": "COLLECTION", 
+      "fields": [
+        { "fieldPath": "empresaId", "order": "ASCENDING" },
+        { "fieldPath": "data", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "despesas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "empresaId", "order": "ASCENDING" },
+        { "fieldPath": "data", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "faturas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "processoId", "order": "ASCENDING" },
+        { "fieldPath": "numeroParcela", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "faturas",
+      "queryScope": "COLLECTION", 
+      "fields": [
+        { "fieldPath": "empresaId", "order": "ASCENDING" },
+        { "fieldPath": "dataVencimento", "order": "ASCENDING" }
+      ]
+    }
+  ]
+}
