@@ -1,10 +1,14 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { AuthProvider as AuthProviderImpl } from '../providers/AuthProvider';
+import { onAuthStateChanged } from 'firebase/auth';
+import { getDoc, doc } from 'firebase/firestore'; 
+import { auth, db } from '../config/firebase';
 
 export interface AuthUser extends User {
   tipo: 'admin' | 'user';
   empresaId?: string; // Presente apenas para usuários comuns
+  isAdmin?: boolean; // Cache do status de admin
 }
 
 export type AuthContextType = {

@@ -19,8 +19,7 @@ export default function FormCliente({ cliente, onClose, onSuccess }: FormCliente
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cepLoading, setCepLoading] = useState(false);
-  const [rgCnhFile, setRgCnhFile] = useState<File | null>(null);
-  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
+  const [documentos, setDocumentos] = useState<File[]>([]);
 
   const [formData, setFormData] = useState({
     nome: cliente?.nome || '',
@@ -67,6 +66,15 @@ export default function FormCliente({ cliente, onClose, onSuccess }: FormCliente
     }
   };
 
+  const handleDocumentosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setDocumentos(prev => [...prev, ...files]);
+  };
+
+  const removeDocumento = (index: number) => {
+    setDocumentos(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !empresaSelecionada) return;
@@ -83,9 +91,9 @@ export default function FormCliente({ cliente, onClose, onSuccess }: FormCliente
 
     try {
       if (cliente) {
-        await clientesService.atualizar(cliente.id, dadosAtualizados);
+        await clientesService.atualizar(cliente.id, formData, documentos);
       } else {
-        await clientesService.criar(dadosAtualizados, rgCnhFile || undefined, comprovanteFile || undefined);
+        await clientesService.criar(formData, documentos);
       }
 
       onSuccess();
@@ -257,15 +265,16 @@ export default function FormCliente({ cliente, onClose, onSuccess }: FormCliente
       </div>
 
       <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">RG ou CNH</label>
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-700">Documentos</label>
           <div className="mt-1 flex items-center">
             <label className="block w-full">
               <span className="sr-only">Escolher arquivo</span>
               <input
                 type="file"
+                multiple
                 accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => setRgCnhFile(e.target.files?.[0] || null)}
+                onChange={handleDocumentosChange}
                 className="block w-full text-sm text-gray-500
                   file:mr-4 file:py-2 file:px-4
                   file:rounded-md file:border-0
@@ -276,31 +285,29 @@ export default function FormCliente({ cliente, onClose, onSuccess }: FormCliente
             </label>
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            Formatos aceitos: PDF, JPG, PNG
+            Formatos aceitos: PDF, JPG, PNG. Você pode selecionar múltiplos arquivos.
           </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Comprovante de Residência</label>
-          <div className="mt-1 flex items-center">
-            <label className="block w-full">
-              <span className="sr-only">Escolher arquivo</span>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => setComprovanteFile(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-md file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-primary file:text-white
-                  hover:file:bg-primary-dark"
-              />
-            </label>
-          </div>
-          <p className="mt-1 text-xs text-gray-500">
-            Formatos aceitos: PDF, JPG, PNG
-          </p>
+          
+          {/* Lista de arquivos selecionados */}
+          {documentos.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm font-medium text-gray-700">Arquivos selecionados:</p>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                {documentos.map((doc, index) => (
+                  <div key={index} className="flex items-center justify-between py-2">
+                    <span className="text-sm text-gray-600">{doc.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeDocumento(index)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

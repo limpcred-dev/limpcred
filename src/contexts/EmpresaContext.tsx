@@ -34,6 +34,7 @@ export function EmpresaProvider({ children }: EmpresaProviderProps) {
 
   useEffect(() => {
     if (!user) {
+      console.log('EmpresaContext: No user, resetting state');
       setLoading(false);
       setEmpresas([]);
       setEmpresaSelecionada(null);
@@ -42,15 +43,18 @@ export function EmpresaProvider({ children }: EmpresaProviderProps) {
 
     const carregarEmpresas = async () => {
       try {
+        console.log('EmpresaContext: Loading empresas for user', user.uid);
         let listaEmpresas = [];
         
         // Verifica se é admin
         const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+        console.log('EmpresaContext: Admin check result', { isAdmin: adminDoc.exists() });
         if (adminDoc.exists()) {
           listaEmpresas = await empresasService.listarPorAdmin(user.uid);
         } else {
           // Se for usuário comum, busca apenas a empresa dele
           const userDoc = await getDoc(doc(db, 'users', user.uid));
+          console.log('EmpresaContext: Regular user check', { hasUser: userDoc.exists() });
           if (userDoc.exists()) {
             const userData = userDoc.data();
             const empresaDoc = await getDoc(doc(db, 'empresas', userData.empresaId));
@@ -62,19 +66,28 @@ export function EmpresaProvider({ children }: EmpresaProviderProps) {
           }
         }
         
+        console.log('EmpresaContext: Empresas loaded', { 
+          count: listaEmpresas.length,
+          empresas: listaEmpresas.map(e => ({ id: e.id, nome: e.nomeFantasia }))
+        });
         setEmpresas(listaEmpresas);
 
         // Only try to recover from localStorage for admin users
         if (adminDoc.exists()) {
           const empresaSalvaId = localStorage.getItem('empresaSelecionada');
+          console.log('EmpresaContext: Checking saved empresa', { empresaSalvaId });
           if (empresaSalvaId) {
             const empresaSalva = listaEmpresas.find(e => e.id === empresaSalvaId);
             if (empresaSalva) {
+              console.log('EmpresaContext: Restoring saved empresa', { 
+                nome: empresaSalva.nomeFantasia 
+              });
               selecionarEmpresa(empresaSalva);
             }
           }
         }
       } catch (err) {
+        console.error('EmpresaContext: Error loading empresas:', err);
         setError('Erro ao carregar empresas');
         console.error(err);
       } finally {

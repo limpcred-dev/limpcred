@@ -20,12 +20,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      
       if (firebaseUser) {
         try {
           // Check if admin
           const adminDoc = await getDoc(doc(db, 'admins', firebaseUser.uid));
           if (adminDoc.exists()) {
-            setUser({ ...firebaseUser, tipo: 'admin' } as AuthUser);
+            const userData = { ...firebaseUser, tipo: 'admin' } as AuthUser;
+            setUser(userData);
+            setLoading(false);
             return;
           }
 
@@ -33,11 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            setUser({ 
+            const userInfo = {
               ...firebaseUser, 
               tipo: 'user',
               empresaId: userData.empresaId 
-            } as AuthUser);
+            } as AuthUser;
+            setUser(userInfo);
+            setLoading(false);
             return;
           }
         } catch (error) {
@@ -49,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     });
+
 
     return () => unsubscribe();
   }, []);
@@ -176,6 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await signOut(auth);
+      localStorage.removeItem('is_admin');
+      localStorage.removeItem('empresaSelecionada');
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Mail, Phone, MapPin, Calendar } from 'lucide-react';
+import { X, Mail, Phone, MapPin, Calendar, FileText, ExternalLink } from 'lucide-react';
 import { Cliente } from '../../types/cliente';
 import { maskCPFCNPJ, maskWhatsapp } from '../../utils/masks';
 
@@ -81,6 +81,34 @@ export default function ClienteDetalhes({ cliente, onClose }: ClienteDetalhesPro
             </div>
           </div>
 
+          {/* Documentos */}
+          {cliente.documentos && cliente.documentos.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Documentos</h3>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                {cliente.documentos.map((doc, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 px-3 hover:bg-gray-100 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-gray-400" />
+                      <span className="text-sm text-gray-600">
+                        {`Documento ${index + 1}`}
+                      </span>
+                    </div>
+                    <a
+                      href={doc}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-primary hover:text-primary-dark"
+                    >
+                      <span className="text-sm">Visualizar</span>
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Data de Cadastro */}
           <div className="flex items-center space-x-3 text-sm text-gray-500">
             <Calendar className="w-4 h-4" />
@@ -88,35 +116,6 @@ export default function ClienteDetalhes({ cliente, onClose }: ClienteDetalhesPro
               Cadastrado em: {cliente.dataCadastro.toLocaleDateString()}
             </span>
           </div>
-
-          {/* Documentos */}
-          {cliente.documentos && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Documentos</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {cliente.documentos.rgCnh && (
-                  <a
-                    href={cliente.documentos.rgCnh}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:text-primary-dark flex items-center gap-2"
-                  >
-                    <span>Visualizar RG/CNH</span>
-                  </a>
-                )}
-                {cliente.documentos.comprovanteResidencia && (
-                  <a
-                    href={cliente.documentos.comprovanteResidencia}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:text-primary-dark flex items-center gap-2"
-                  >
-                    <span>Visualizar Comprovante de Residência</span>
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}
