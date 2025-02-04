@@ -21,26 +21,26 @@ export const clientesService = {
     documentosFiles: File[] = []
   ) {
     try {
+      // Verificar se empresaId e vendedorId estão presentes antes de tudo
+      if (!dados.empresaId || !dados.vendedorId) {
+        throw new Error('É necessário fornecer empresaId e vendedorId');
+      }
+
       const documentosUrls: string[] = [];
 
-      // Verificar se os documentos foram enviados e fazer o upload
+      // Fazer upload dos documentos, se houver
       for (const file of documentosFiles) {
-        const fileRef = ref(storage, `documentos/${dados.empresaId}/${dados.documento}/${Date.now()}-${file.name}`);
+        const fileRef = ref(storage, `documentos/${dados.empresaId}/${dados.nome}/${Date.now()}-${file.name}`);
         await uploadBytes(fileRef, file);
         const url = await getDownloadURL(fileRef);
         documentosUrls.push(url);
       }
 
-      // Verificar se empresaId e vendedorId estão presentes
-      if (!dados.empresaId || !dados.vendedorId) {
-        throw new Error('É necessário fornecer empresaId e vendedorId');
-      }
-
       const clienteRef = collection(db, 'clientes');
       const docRef = await addDoc(clienteRef, {
         ...dados,
-        documentos: documentosUrls,  // Atribuindo os documentos carregados
-        dataCadastro: serverTimestamp(),  // Timestamp do cadastro
+        documentos: documentosUrls,
+        dataCadastro: serverTimestamp(),
       });
       
       return {
@@ -50,12 +50,11 @@ export const clientesService = {
         dataCadastro: new Date()
       };
     } catch (error) {
-      console.error('Erro ao criar cliente:', error);
-      throw new Error('Não foi possível criar o cliente');
+      console.error('Erro ao criar cliente:', error.message);
+      throw new Error(`Não foi possível criar o cliente: ${error.message}`);
     }
   },
 
-  // Listar clientes por vendedor
   async listarPorVendedor(vendedorId: string) {
     try {
       const q = query(
@@ -67,16 +66,15 @@ export const clientesService = {
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        dataCadastro: doc.data().dataCadastro?.toDate(),
-        dataAtualizacao: doc.data().dataAtualizacao?.toDate()
+        dataCadastro: doc.data().dataCadastro?.toDate?.() || null,
+        dataAtualizacao: doc.data().dataAtualizacao?.toDate?.() || null
       })) as Cliente[];
     } catch (error) {
-      console.error('Erro ao listar clientes:', error);
+      console.error('Erro ao listar clientes:', error.message);
       throw new Error('Não foi possível carregar os clientes');
     }
   },
 
-  // Listar clientes por vendedor e empresa
   async listarPorVendedorEEmpresa(vendedorId: string, empresaId: string) {
     try {
       const q = query(
@@ -89,16 +87,15 @@ export const clientesService = {
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        dataCadastro: doc.data().dataCadastro?.toDate(),
-        dataAtualizacao: doc.data().dataAtualizacao?.toDate()
+        dataCadastro: doc.data().dataCadastro?.toDate?.() || null,
+        dataAtualizacao: doc.data().dataAtualizacao?.toDate?.() || null
       })) as Cliente[];
     } catch (error) {
-      console.error('Erro ao listar clientes:', error);
+      console.error('Erro ao listar clientes:', error.message);
       throw new Error('Não foi possível carregar os clientes');
     }
   },
 
-  // Listar clientes por empresa
   async listarPorEmpresa(empresaId: string) {
     try {
       const q = query(
@@ -111,16 +108,15 @@ export const clientesService = {
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        dataCadastro: doc.data().dataCadastro?.toDate(),
-        dataAtualizacao: doc.data().dataAtualizacao?.toDate()
+        dataCadastro: doc.data().dataCadastro?.toDate?.() || null,
+        dataAtualizacao: doc.data().dataAtualizacao?.toDate?.() || null
       }));
     } catch (error) {
-      console.error('Erro ao listar clientes:', error);
+      console.error('Erro ao listar clientes:', error.message);
       throw new Error('Não foi possível carregar os clientes');
     }
   },
 
-  // Buscar cliente por ID
   async buscarPorId(id: string) {
     try {
       const docRef = doc(db, 'clientes', id);
@@ -133,22 +129,21 @@ export const clientesService = {
       return {
         id: docSnap.id,
         ...docSnap.data(),
-        dataCadastro: docSnap.data().dataCadastro?.toDate()
+        dataCadastro: docSnap.data().dataCadastro?.toDate?.() || null
       } as Cliente;
     } catch (error) {
-      console.error('Erro ao buscar cliente:', error);
+      console.error('Erro ao buscar cliente:', error.message);
       throw new Error('Não foi possível carregar o cliente');
     }
   },
 
-  // Atualizar dados do cliente
-  async atualizar(id: string, dados: Partial<Cliente>, novosDocumentos: File[] = []): Promise<void> {
+  async atualizar(id: string, dados: Partial<Cliente>, novosDocumentos: File[] = []) {
     try {
       let documentosAtualizados = dados.documentos || [];
 
       // Upload dos novos documentos, se houver
       for (const file of novosDocumentos) {
-        const fileRef = ref(storage, `documentos/${dados.empresaId}/${dados.documento}/${Date.now()}-${file.name}`);
+        const fileRef = ref(storage, `documentos/${dados.empresaId}/${dados.nome}/${Date.now()}-${file.name}`);
         await uploadBytes(fileRef, file);
         const url = await getDownloadURL(fileRef);
         documentosAtualizados.push(url);
@@ -161,12 +156,11 @@ export const clientesService = {
         dataAtualizacao: serverTimestamp()
       });
     } catch (error) {
-      console.error('Erro ao atualizar cliente:', error);
+      console.error('Erro ao atualizar cliente:', error.message);
       throw new Error('Não foi possível atualizar o cliente');
     }
   },
 
-  // Inativar cliente
   async inativar(id: string) {
     try {
       const docRef = doc(db, 'clientes', id);
@@ -175,7 +169,7 @@ export const clientesService = {
         dataInativacao: serverTimestamp()
       });
     } catch (error) {
-      console.error('Erro ao inativar cliente:', error);
+      console.error('Erro ao inativar cliente:', error.message);
       throw new Error('Não foi possível inativar o cliente');
     }
   }
