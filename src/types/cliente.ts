@@ -17,8 +17,5 @@ export interface Cliente {
   empresaId: string;
   status: 'ativo' | 'inativo';
   dataCadastro: Date;
-  documentos?: {
-    rgCnh?: string;
-    comprovanteResidencia?: string;
-  };
+  documentos?: string[];
 }
