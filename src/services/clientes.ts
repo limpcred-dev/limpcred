@@ -18,44 +18,40 @@ import { Cliente } from '../types/cliente';
 export const clientesService = {
   async criar(
     dados: Omit<Cliente, 'id' | 'dataCadastro'>,
-    rgCnhFile?: File,
-    comprovanteFile?: File
+    documentosFiles: File[] = []
   ) {
     try {
-      let documentos = {};
-
-      // Upload RG/CNH if provided
-      if (rgCnhFile) {
-        const rgCnhRef = ref(storage, `documentos/${dados.empresaId}/${dados.documento}/rg-cnh-${Date.now()}`);
-        await uploadBytes(rgCnhRef, rgCnhFile);
-        const rgCnhUrl = await getDownloadURL(rgCnhRef);
-        documentos = { ...documentos, rgCnh: rgCnhUrl };
+      // Verificar se empresaId e vendedorId estão presentes antes de tudo
+      if (!dados.empresaId || !dados.vendedorId) {
+        throw new Error('É necessário fornecer empresaId e vendedorId');
       }
 
-      // Upload comprovante de residência if provided
-      if (comprovanteFile) {
-        const comprovanteRef = ref(storage, `documentos/${dados.empresaId}/${dados.documento}/comprovante-${Date.now()}`);
-        await uploadBytes(comprovanteRef, comprovanteFile);
-        const comprovanteUrl = await getDownloadURL(comprovanteRef);
-        documentos = { ...documentos, comprovanteResidencia: comprovanteUrl };
+      const documentosUrls: string[] = [];
+
+      // Fazer upload dos documentos, se houver
+      for (const file of documentosFiles) {
+        const fileRef = ref(storage, `documentos/${dados.empresaId}/${dados.nome}/${Date.now()}-${file.name}`);
+        await uploadBytes(fileRef, file);
+        const url = await getDownloadURL(fileRef);
+        documentosUrls.push(url);
       }
 
       const clienteRef = collection(db, 'clientes');
       const docRef = await addDoc(clienteRef, {
         ...dados,
-        documentos,
-        dataCadastro: serverTimestamp()
+        documentos: documentosUrls,
+        dataCadastro: serverTimestamp(),
       });
       
       return {
         id: docRef.id,
         ...dados,
-        documentos,
+        documentos: documentosUrls,
         dataCadastro: new Date()
       };
     } catch (error) {
-      console.error('Erro ao criar cliente:', error);
-      throw new Error('Não foi possível criar o cliente');
+      console.error('Erro ao criar cliente:', error.message);
+      throw new Error(`Não foi possível criar o cliente: ${error.message}`);
     }
   },
 
@@ -70,16 +66,11 @@ export const clientesService = {
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        dataCadastro: doc.data().dataCadastro?.toDate(),
-        dataAtualizacao: doc.data().dataAtualizacao?.toDate()
+        dataCadastro: doc.data().dataCadastro?.toDate?.() || null,
+        dataAtualizacao: doc.data().dataAtualizacao?.toDate?.() || null
       })) as Cliente[];
     } catch (error) {
-      // Check if error is due to missing index
-      if (error.code === 'failed-precondition') {
-        console.error('Index missing:', error);
-        throw new Error('Erro de configuração do sistema. Entre em contato com o suporte.');
-      }
-      console.error('Erro ao listar clientes:', error);
+      console.error('Erro ao listar clientes:', error.message);
       throw new Error('Não foi possível carregar os clientes');
     }
   },
@@ -96,15 +87,11 @@ export const clientesService = {
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        dataCadastro: doc.data().dataCadastro?.toDate(),
-        dataAtualizacao: doc.data().dataAtualizacao?.toDate()
+        dataCadastro: doc.data().dataCadastro?.toDate?.() || null,
+        dataAtualizacao: doc.data().dataAtualizacao?.toDate?.() || null
       })) as Cliente[];
     } catch (error) {
-      if (error.code === 'failed-precondition') {
-        console.error('Index missing:', error);
-        throw new Error('Erro de configuração do sistema. Entre em contato com o suporte.');
-      }
-      console.error('Erro ao listar clientes:', error);
+      console.error('Erro ao listar clientes:', error.message);
       throw new Error('Não foi possível carregar os clientes');
     }
   },
@@ -121,11 +108,11 @@ export const clientesService = {
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        dataCadastro: doc.data().dataCadastro?.toDate(),
-        dataAtualizacao: doc.data().dataAtualizacao?.toDate()
+        dataCadastro: doc.data().dataCadastro?.toDate?.() || null,
+        dataAtualizacao: doc.data().dataAtualizacao?.toDate?.() || null
       }));
     } catch (error) {
-      console.error('Erro ao listar clientes:', error);
+      console.error('Erro ao listar clientes:', error.message);
       throw new Error('Não foi possível carregar os clientes');
     }
   },
@@ -142,23 +129,34 @@ export const clientesService = {
       return {
         id: docSnap.id,
         ...docSnap.data(),
-        dataCadastro: docSnap.data().dataCadastro?.toDate()
+        dataCadastro: docSnap.data().dataCadastro?.toDate?.() || null
       } as Cliente;
     } catch (error) {
-      console.error('Erro ao buscar cliente:', error);
+      console.error('Erro ao buscar cliente:', error.message);
       throw new Error('Não foi possível carregar o cliente');
     }
   },
 
-  async atualizar(id: string, dados: Partial<Cliente>) {
+  async atualizar(id: string, dados: Partial<Cliente>, novosDocumentos: File[] = []) {
     try {
+      let documentosAtualizados = dados.documentos || [];
+
+      // Upload dos novos documentos, se houver
+      for (const file of novosDocumentos) {
+        const fileRef = ref(storage, `documentos/${dados.empresaId}/${dados.nome}/${Date.now()}-${file.name}`);
+        await uploadBytes(fileRef, file);
+        const url = await getDownloadURL(fileRef);
+        documentosAtualizados.push(url);
+      }
+
       const docRef = doc(db, 'clientes', id);
       await updateDoc(docRef, {
         ...dados,
+        documentos: documentosAtualizados,
         dataAtualizacao: serverTimestamp()
       });
     } catch (error) {
-      console.error('Erro ao atualizar cliente:', error);
+      console.error('Erro ao atualizar cliente:', error.message);
       throw new Error('Não foi possível atualizar o cliente');
     }
   },
@@ -171,7 +169,7 @@ export const clientesService = {
         dataInativacao: serverTimestamp()
       });
     } catch (error) {
-      console.error('Erro ao inativar cliente:', error);
+      console.error('Erro ao inativar cliente:', error.message);
       throw new Error('Não foi possível inativar o cliente');
     }
   }
