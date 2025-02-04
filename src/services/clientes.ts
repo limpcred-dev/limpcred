@@ -18,39 +18,30 @@ import { Cliente } from '../types/cliente';
 export const clientesService = {
   async criar(
     dados: Omit<Cliente, 'id' | 'dataCadastro'>,
-    rgCnhFile?: File,
-    comprovanteFile?: File
+    documentosFiles: File[] = []
   ) {
     try {
-      let documentos = {};
+      const documentosUrls: string[] = [];
 
-      // Upload RG/CNH if provided
-      if (rgCnhFile) {
-        const rgCnhRef = ref(storage, `documentos/${dados.empresaId}/${dados.documento}/rg-cnh-${Date.now()}`);
-        await uploadBytes(rgCnhRef, rgCnhFile);
-        const rgCnhUrl = await getDownloadURL(rgCnhRef);
-        documentos = { ...documentos, rgCnh: rgCnhUrl };
-      }
-
-      // Upload comprovante de residência if provided
-      if (comprovanteFile) {
-        const comprovanteRef = ref(storage, `documentos/${dados.empresaId}/${dados.documento}/comprovante-${Date.now()}`);
-        await uploadBytes(comprovanteRef, comprovanteFile);
-        const comprovanteUrl = await getDownloadURL(comprovanteRef);
-        documentos = { ...documentos, comprovanteResidencia: comprovanteUrl };
+      // Upload all documents
+      for (const file of documentosFiles) {
+        const fileRef = ref(storage, `documentos/${dados.empresaId}/${dados.documento}/${Date.now()}-${file.name}`);
+        await uploadBytes(fileRef, file);
+        const url = await getDownloadURL(fileRef);
+        documentosUrls.push(url);
       }
 
       const clienteRef = collection(db, 'clientes');
       const docRef = await addDoc(clienteRef, {
         ...dados,
-        documentos,
+        documentos: documentosUrls,
         dataCadastro: serverTimestamp()
       });
       
       return {
         id: docRef.id,
         ...dados,
-        documentos,
+        documentos: documentosUrls,
         dataCadastro: new Date()
       };
     } catch (error) {
@@ -150,11 +141,22 @@ export const clientesService = {
     }
   },
 
-  async atualizar(id: string, dados: Partial<Cliente>) {
+  async atualizar(id: string, dados: Partial<Cliente>, novosDocumentos: File[] = []): Promise<void> {
     try {
+      let documentosAtualizados = dados.documentos || [];
+
+      // Upload new documents
+      for (const file of novosDocumentos) {
+        const fileRef = ref(storage, `documentos/${dados.empresaId}/${dados.documento}/${Date.now()}-${file.name}`);
+        await uploadBytes(fileRef, file);
+        const url = await getDownloadURL(fileRef);
+        documentosAtualizados.push(url);
+      }
+
       const docRef = doc(db, 'clientes', id);
       await updateDoc(docRef, {
         ...dados,
+        documentos: documentosAtualizados,
         dataAtualizacao: serverTimestamp()
       });
     } catch (error) {
