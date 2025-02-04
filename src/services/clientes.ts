@@ -23,7 +23,7 @@ export const clientesService = {
     try {
       const documentosUrls: string[] = [];
 
-      // Upload all documents
+      // Verificar se os documentos foram enviados e fazer o upload
       for (const file of documentosFiles) {
         const fileRef = ref(storage, `documentos/${dados.empresaId}/${dados.documento}/${Date.now()}-${file.name}`);
         await uploadBytes(fileRef, file);
@@ -31,11 +31,16 @@ export const clientesService = {
         documentosUrls.push(url);
       }
 
+      // Verificar se empresaId e vendedorId estão presentes
+      if (!dados.empresaId || !dados.vendedorId) {
+        throw new Error('É necessário fornecer empresaId e vendedorId');
+      }
+
       const clienteRef = collection(db, 'clientes');
       const docRef = await addDoc(clienteRef, {
         ...dados,
-        documentos: documentosUrls,
-        dataCadastro: serverTimestamp()
+        documentos: documentosUrls,  // Atribuindo os documentos carregados
+        dataCadastro: serverTimestamp(),  // Timestamp do cadastro
       });
       
       return {
@@ -50,6 +55,7 @@ export const clientesService = {
     }
   },
 
+  // Listar clientes por vendedor
   async listarPorVendedor(vendedorId: string) {
     try {
       const q = query(
@@ -65,16 +71,12 @@ export const clientesService = {
         dataAtualizacao: doc.data().dataAtualizacao?.toDate()
       })) as Cliente[];
     } catch (error) {
-      // Check if error is due to missing index
-      if (error.code === 'failed-precondition') {
-        console.error('Index missing:', error);
-        throw new Error('Erro de configuração do sistema. Entre em contato com o suporte.');
-      }
       console.error('Erro ao listar clientes:', error);
       throw new Error('Não foi possível carregar os clientes');
     }
   },
 
+  // Listar clientes por vendedor e empresa
   async listarPorVendedorEEmpresa(vendedorId: string, empresaId: string) {
     try {
       const q = query(
@@ -91,15 +93,12 @@ export const clientesService = {
         dataAtualizacao: doc.data().dataAtualizacao?.toDate()
       })) as Cliente[];
     } catch (error) {
-      if (error.code === 'failed-precondition') {
-        console.error('Index missing:', error);
-        throw new Error('Erro de configuração do sistema. Entre em contato com o suporte.');
-      }
       console.error('Erro ao listar clientes:', error);
       throw new Error('Não foi possível carregar os clientes');
     }
   },
 
+  // Listar clientes por empresa
   async listarPorEmpresa(empresaId: string) {
     try {
       const q = query(
@@ -121,6 +120,7 @@ export const clientesService = {
     }
   },
 
+  // Buscar cliente por ID
   async buscarPorId(id: string) {
     try {
       const docRef = doc(db, 'clientes', id);
@@ -141,11 +141,12 @@ export const clientesService = {
     }
   },
 
+  // Atualizar dados do cliente
   async atualizar(id: string, dados: Partial<Cliente>, novosDocumentos: File[] = []): Promise<void> {
     try {
       let documentosAtualizados = dados.documentos || [];
 
-      // Upload new documents
+      // Upload dos novos documentos, se houver
       for (const file of novosDocumentos) {
         const fileRef = ref(storage, `documentos/${dados.empresaId}/${dados.documento}/${Date.now()}-${file.name}`);
         await uploadBytes(fileRef, file);
@@ -165,6 +166,7 @@ export const clientesService = {
     }
   },
 
+  // Inativar cliente
   async inativar(id: string) {
     try {
       const docRef = doc(db, 'clientes', id);
